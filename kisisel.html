@@ -57,7 +57,6 @@ body {
 
 <h3>📩 Mesajlar</h3>
 
-<!-- 🔥 YENİ BUTONLAR -->
 <div>
 <button onclick="tumunuSil()">🧹 Tüm Mesajları Sil</button>
 <button onclick="okunanlariSil()">✔ Okunmuşları Temizle</button>
@@ -85,12 +84,13 @@ const db = getFirestore(app);
 
 let kullanici = (localStorage.getItem("kullanici") || "").toLowerCase();
 
-/* 📊 PERSONEL */
-const ref = doc(db, "kasa", "excel");
 
-onSnapshot(ref, (snap)=>{
+// ✅ GOOGLE SHEETS BAĞLANTISI
+const url = "https://script.google.com/macros/s/AKfycbxaBWR1qtAjl5HZg8cmCB8yNd-PEt_0U1d3epl4ZjSWDKPS8YlpVEgauTvdyBZh40pfJg/exec";
 
-    let data = snap.exists() ? snap.data().liste : [];
+fetch(url)
+.then(res => res.json())
+.then(data => {
 
     let kisi = data.find(x =>
         (x.isim || "").toLowerCase() === kullanici
@@ -114,7 +114,8 @@ onSnapshot(ref, (snap)=>{
     `;
 });
 
-/* 📩 MESAJ */
+
+// 📩 MESAJ SİSTEMİ (DEĞİŞMEDİ)
 const mesajRef = doc(db, "mesajlar", kullanici);
 
 onSnapshot(mesajRef, (snap)=>{
@@ -159,7 +160,6 @@ onSnapshot(mesajRef, (snap)=>{
 
 });
 
-/* ✔ OKUNDU */
 window.okunduYap = async function(index){
 
     let snap = await getDoc(mesajRef);
@@ -172,7 +172,6 @@ window.okunduYap = async function(index){
     await setDoc(mesajRef, {liste});
 }
 
-/* 🗑️ TEK SİL */
 window.silMesaj = async function(index){
 
     let snap = await getDoc(mesajRef);
@@ -185,7 +184,6 @@ window.silMesaj = async function(index){
     await setDoc(mesajRef, {liste: yeniListe});
 }
 
-/* 🔥 TÜMÜNÜ SİL */
 window.tumunuSil = async function(){
 
     if(!confirm("Tüm mesajlar silinsin mi?")) return;
@@ -193,7 +191,6 @@ window.tumunuSil = async function(){
     await setDoc(mesajRef, {liste: []});
 }
 
-/* 🔥 SADECE OKUNMUŞLARI SİL */
 window.okunanlariSil = async function(){
 
     let snap = await getDoc(mesajRef);
