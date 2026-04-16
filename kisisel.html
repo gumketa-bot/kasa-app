@@ -57,7 +57,6 @@ body {
 
 <h3>📩 Mesajlar</h3>
 
-<!-- 🔥 YENİ BUTONLAR -->
 <div>
 <button onclick="tumunuSil()">🧹 Tüm Mesajları Sil</button>
 <button onclick="okunanlariSil()">✔ Okunmuşları Temizle</button>
@@ -83,7 +82,16 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let kullanici = (localStorage.getItem("kullanici") || "").toLowerCase();
+let kullanici = (localStorage.getItem("kullanici") || "").toLowerCase().trim();
+
+/* 🔥 NORMALİZE FONKSİYON */
+function temizle(str){
+    return (str || "")
+        .toLowerCase()
+        .trim()
+        .replace(/ı/g,"i")
+        .replace(/İ/g,"i");
+}
 
 /* 📊 PERSONEL */
 const ref = doc(db, "kasa", "excel");
@@ -93,7 +101,7 @@ onSnapshot(ref, (snap)=>{
     let data = snap.exists() ? snap.data().liste : [];
 
     let kisi = data.find(x =>
-        (x.isim || "").toLowerCase() === kullanici
+        temizle(x.isim) === temizle(kullanici)
     );
 
     let div = document.getElementById("bilgi");
