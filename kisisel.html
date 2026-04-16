@@ -13,7 +13,7 @@ body {
 }
 
 .container {
-    max-width:600px;
+    max-width:700px;
     margin:auto;
 }
 
@@ -22,6 +22,21 @@ body {
     padding:15px;
     margin:10px;
     border-radius:10px;
+}
+
+table {
+    width:100%;
+    border-collapse: collapse;
+}
+
+td {
+    border:1px solid #444;
+    padding:8px;
+}
+
+td:first-child {
+    font-weight:bold;
+    background:#333;
 }
 
 .yeniMesaj {
@@ -57,7 +72,6 @@ body {
 
 <h3>📩 Mesajlar</h3>
 
-<!-- 🔥 YENİ BUTONLAR -->
 <div>
 <button onclick="tumunuSil()">🧹 Tüm Mesajları Sil</button>
 <button onclick="okunanlariSil()">✔ Okunmuşları Temizle</button>
@@ -83,18 +97,37 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let kullanici = (localStorage.getItem("kullanici") || "").toLowerCase();
+let kullanici = (localStorage.getItem("kullanici") || "").toLowerCase().trim();
 
-/* 📊 PERSONEL */
+/* 🔥 İSİM TEMİZLE */
+function temizle(str){
+    return (str || "")
+        .toLowerCase()
+        .trim()
+        .replace(/ı/g,"i")
+        .replace(/İ/g,"i");
+}
+
+/* 📊 EXCEL VERİSİ */
 const ref = doc(db, "kasa", "excel");
 
 onSnapshot(ref, (snap)=>{
 
     let data = snap.exists() ? snap.data().liste : [];
 
-    let kisi = data.find(x =>
-        (x.isim || "").toLowerCase() === kullanici
-    );
+    /* 🔥 KULLANICIYI BUL (HER TÜRLÜ İSİMİ YAKALAR) */
+    let kisi = data.find(x => {
+
+        let isim =
+            x.isim ||
+            x.ISIM ||
+            x["İsim"] ||
+            x["Ad"] ||
+            x["ad"] ||
+            "";
+
+        return temizle(isim) === temizle(kullanici);
+    });
 
     let div = document.getElementById("bilgi");
 
@@ -103,18 +136,28 @@ onSnapshot(ref, (snap)=>{
         return;
     }
 
-    div.innerHTML = `
-        <div class="kart">
-            <h3>${kisi.isim}</h3>
-            <p>Departman: ${kisi.departman || "-"}</p>
-            <p>Sicil: ${kisi.sicil || "-"}</p>
-            <p>Telefon: ${kisi.telefon || "-"}</p>
-            <p>Fiş Sayısı: ${kisi.fis || "-"}</p>
-        </div>
-    `;
+    /* 🔥 TABLO OLUŞTUR */
+    let html = `<div class="kart"><table>`;
+
+    for(let key in kisi){
+
+        if(!kisi[key]) continue; // boşları gösterme
+
+        html += `
+            <tr>
+                <td>${key}</td>
+                <td>${kisi[key]}</td>
+            </tr>
+        `;
+    }
+
+    html += `</table></div>`;
+
+    div.innerHTML = html;
 });
 
-/* 📩 MESAJ */
+
+/* 📩 MESAJ SİSTEMİ (AYNEN KALDI) */
 const mesajRef = doc(db, "mesajlar", kullanici);
 
 onSnapshot(mesajRef, (snap)=>{
@@ -161,12 +204,10 @@ onSnapshot(mesajRef, (snap)=>{
 
 /* ✔ OKUNDU */
 window.okunduYap = async function(index){
-
     let snap = await getDoc(mesajRef);
     if(!snap.exists()) return;
 
     let liste = snap.data().liste || [];
-
     liste[index].okundu = true;
 
     await setDoc(mesajRef, {liste});
@@ -174,12 +215,10 @@ window.okunduYap = async function(index){
 
 /* 🗑️ TEK SİL */
 window.silMesaj = async function(index){
-
     let snap = await getDoc(mesajRef);
     if(!snap.exists()) return;
 
     let liste = snap.data().liste || [];
-
     let yeniListe = liste.filter((_, i) => i !== index);
 
     await setDoc(mesajRef, {liste: yeniListe});
@@ -187,20 +226,16 @@ window.silMesaj = async function(index){
 
 /* 🔥 TÜMÜNÜ SİL */
 window.tumunuSil = async function(){
-
     if(!confirm("Tüm mesajlar silinsin mi?")) return;
-
     await setDoc(mesajRef, {liste: []});
 }
 
-/* 🔥 SADECE OKUNMUŞLARI SİL */
+/* 🔥 OKUNMUŞLARI SİL */
 window.okunanlariSil = async function(){
-
     let snap = await getDoc(mesajRef);
     if(!snap.exists()) return;
 
     let liste = snap.data().liste || [];
-
     let filtre = liste.filter(m => !m.okundu);
 
     await setDoc(mesajRef, {liste: filtre});
