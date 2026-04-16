@@ -53,11 +53,10 @@ body {
 
 <h2>👤 Kişisel Panel <span id="sayac"></span></h2>
 
-<div id="bilgi"></div>
+<div id="bilgi">Yükleniyor...</div>
 
 <h3>📩 Mesajlar</h3>
 
-<!-- 🔥 YENİ BUTONLAR -->
 <div>
 <button onclick="tumunuSil()">🧹 Tüm Mesajları Sil</button>
 <button onclick="okunanlariSil()">✔ Okunmuşları Temizle</button>
@@ -83,36 +82,53 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let kullanici = (localStorage.getItem("kullanici") || "").toLowerCase();
+/* 🔥 KULLANICI */
+let kullanici = (localStorage.getItem("kullanici") || "").toLowerCase().trim();
 
-/* 📊 PERSONEL */
-const ref = doc(db, "kasa", "excel");
+/* 🔥 GOOGLE SHEETS URL */
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbxaBWR1qtAjl5HZg8cmCB8yNd-PEt_0U1d3epl4ZjSWDKPS8YlpVEgauTvdyBZh40pfJg/exec";
 
-onSnapshot(ref, (snap)=>{
+/* 📊 VERİ ÇEK */
+async function veriGetir(){
 
-    let data = snap.exists() ? snap.data().liste : [];
+    try{
+        let res = await fetch(SHEET_URL);
+        let data = await res.json();
 
-    let kisi = data.find(x =>
-        (x.isim || "").toLowerCase() === kullanici
-    );
+        console.log("KULLANICI:", kullanici);
+        console.log("DATA:", data);
 
-    let div = document.getElementById("bilgi");
+        let kisi = data.find(x =>
+            (x.isim || "")
+            .toString()
+            .toLowerCase()
+            .trim() === kullanici
+        );
 
-    if(!kisi){
-        div.innerHTML = "Veri bulunamadı ❌";
-        return;
+        let div = document.getElementById("bilgi");
+
+        if(!kisi){
+            div.innerHTML = "Veri bulunamadı ❌";
+            return;
+        }
+
+        div.innerHTML = `
+            <div class="kart">
+                <h3>${kisi.isim || "-"}</h3>
+                <p>Departman: ${kisi.departman || "-"}</p>
+                <p>Sicil: ${kisi.sicil || "-"}</p>
+                <p>Telefon: ${kisi.telefon || "-"}</p>
+                <p>Fiş Sayısı: ${kisi.fis || "-"}</p>
+            </div>
+        `;
+
+    }catch(e){
+        console.error(e);
+        document.getElementById("bilgi").innerHTML = "Veri çekilemedi ❌";
     }
+}
 
-    div.innerHTML = `
-        <div class="kart">
-            <h3>${kisi.isim}</h3>
-            <p>Departman: ${kisi.departman || "-"}</p>
-            <p>Sicil: ${kisi.sicil || "-"}</p>
-            <p>Telefon: ${kisi.telefon || "-"}</p>
-            <p>Fiş Sayısı: ${kisi.fis || "-"}</p>
-        </div>
-    `;
-});
+veriGetir();
 
 /* 📩 MESAJ */
 const mesajRef = doc(db, "mesajlar", kullanici);
@@ -185,7 +201,7 @@ window.silMesaj = async function(index){
     await setDoc(mesajRef, {liste: yeniListe});
 }
 
-/* 🔥 TÜMÜNÜ SİL */
+/* 🧹 TÜMÜNÜ SİL */
 window.tumunuSil = async function(){
 
     if(!confirm("Tüm mesajlar silinsin mi?")) return;
@@ -193,7 +209,7 @@ window.tumunuSil = async function(){
     await setDoc(mesajRef, {liste: []});
 }
 
-/* 🔥 SADECE OKUNMUŞLARI SİL */
+/* ✔ OKUNMUŞLARI SİL */
 window.okunanlariSil = async function(){
 
     let snap = await getDoc(mesajRef);
